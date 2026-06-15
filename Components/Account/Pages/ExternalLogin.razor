@@ -16,17 +16,16 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<ExternalLogin> Logger
 
-<PageTitle>Register</PageTitle>
+<PageTitle>Registrarse</PageTitle>
 
 <StatusMessage Message="@message" />
-<h1>Register</h1>
-<h2>Associate your @ProviderDisplayName account.</h2>
+<h1>Registrarse</h1>
+<h2>Asocie su cuenta de @ProviderDisplayName.</h2>
 <hr />
 
 <div  class="alert alert-info">
-    You've successfully authenticated with <strong>@ProviderDisplayName</strong>.
-    Please enter an email address for this site below and click the Register button to finish
-    logging in.
+    Se autenticó correctamente con <strong>@ProviderDisplayName</strong>.
+    Ingrese un correo electrónico para este sitio y haga clic en Registrarse para completar el inicio de sesión.
 </div>
 
 <div class="row">
@@ -35,11 +34,11 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email." />
-                <label for="email" class="form-label">Email</label>
+                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="email" placeholder="Ingrese su correo electrónico" />
+                <label for="email" class="form-label">Correo electrónico</label>
                 <ValidationMessage For="() => Input.Email" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Registrarse</button>
         </EditForm>
     </div>
 </div>
@@ -190,6 +189,7 @@
     {
         [Required]
         [EmailAddress]
+        [Display(Name = "Correo electrónico")]
         public string Email { get; set; } = "";
     }
 }
