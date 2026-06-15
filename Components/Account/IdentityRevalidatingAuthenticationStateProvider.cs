@@ -20,10 +20,21 @@ namespace DecIva.Components.Account
         protected override async Task<bool> ValidateAuthenticationStateAsync(
             AuthenticationState authenticationState, CancellationToken cancellationToken)
         {
-            // Get the user manager from a new scope to ensure it fetches fresh data
-            await using var scope = scopeFactory.CreateAsyncScope();
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            return await ValidateSecurityStampAsync(userManager, authenticationState.User);
+            if (authenticationState.User.Identity?.IsAuthenticated != true)
+                return true;
+
+            try
+            {
+                await using var scope = scopeFactory.CreateAsyncScope();
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                return await ValidateSecurityStampAsync(userManager, authenticationState.User);
+            }
+            catch (Exception ex)
+            {
+                loggerFactory.CreateLogger<IdentityRevalidatingAuthenticationStateProvider>()
+                    .LogWarning(ex, "No se pudo revalidar la sesión; se mantiene el estado actual.");
+                return true;
+            }
         }
 
         private async Task<bool> ValidateSecurityStampAsync(UserManager<ApplicationUser> userManager, ClaimsPrincipal principal)

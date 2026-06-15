@@ -3,6 +3,7 @@ using DecIva.Components.Account;
 using DecIva.Data;
 using DecIva.Services;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -46,6 +47,15 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 builder.Services.AddSingleton<CalculadoraIvaService>();
 builder.Services.AddSingleton<GeneradorPdfDeclaracionService>();
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto
+        | ForwardedHeaders.XForwardedHost;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -53,6 +63,8 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await MigrateWithRetryAsync(db);
 }
+
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {
@@ -63,6 +75,9 @@ else
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
 }
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseStaticFiles();
 app.UseAntiforgery();
@@ -85,9 +100,11 @@ static async Task MigrateWithRetryAsync(ApplicationDbContext db)
             await db.Database.MigrateAsync();
             return;
         }
-        catch (NpgsqlException) when (attempt < maxAttempts)
+        catch (Exception ex) when (attempt < maxAttempts && ex is NpgsqlException or InvalidOperationException)
         {
             await Task.Delay(TimeSpan.FromSeconds(3));
         }
     }
+
+    await db.Database.MigrateAsync();
 }
