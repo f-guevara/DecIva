@@ -15,8 +15,17 @@ out/
 appsettings.Development.json
 Properties/serviceDependencies*.json.user
 
-## Samples with taxpayer data
+## PDFs — nunca subir (muestras, declaraciones, guías generadas)
 *.pdf
+*.PDF
+**/*.pdf
+**/*.PDF
+
+## Documentos locales de referencia / datos de contribuyentes
+samples/
+docs/samples/
+*Iva-*.pdf
+*iva-*.pdf
 
 ## OS
 Thumbs.db
