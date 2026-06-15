@@ -5,6 +5,7 @@ using DecIva.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using QuestPDF.Infrastructure;
 
 QuestPDF.Settings.License = LicenseType.Community;
@@ -50,7 +51,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();
+    await MigrateWithRetryAsync(db);
 }
 
 if (app.Environment.IsDevelopment())
@@ -72,3 +73,21 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+
+static async Task MigrateWithRetryAsync(ApplicationDbContext db)
+{
+    const int maxAttempts = 10;
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    {
+        try
+        {
+            await db.Database.MigrateAsync();
+            return;
+        }
+        catch (NpgsqlException) when (attempt < maxAttempts)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3));
+        }
+    }
+}

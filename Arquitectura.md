@@ -63,7 +63,7 @@ mkdir -p /opt/deciva
 
 ### 1. Clonar el repo
 ```bash
-git clone https://github.com/f-guevara/DecIva.git /opt/deciva
+git clone git@github.com:f-guevara/DecIva.git /opt/deciva
 cd /opt/deciva
 cp .env.example .env
 nano .env   # rellenar con valores reales

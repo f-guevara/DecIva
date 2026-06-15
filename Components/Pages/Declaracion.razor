@@ -114,59 +114,72 @@
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-header fw-semibold">Anticipo a cuenta (2%) <span class="text-muted fw-normal">opcional</span></div>
-            <div class="card-body">
-                <p class="small text-muted">
-                    El anticipo a cuenta del <strong>2%</strong> es distinto del IVA del 13%.
-                    Las ventas y compras siguen declarándose con IVA normal en las casillas 85/80.
-                    El anticipo recibido en sus ventas CCF <strong>reduce</strong> el impuesto (casilla 168).
-                    El anticipo que usted pagó al comprar se declara aparte (casilla 165).
-                </p>
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <label class="form-label">Base ventas CCF con anticipo <span class="text-muted">(sin IVA)</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text">US$</span>
-                            <InputNumber @bind-Value="_entrada.BaseVentasSujetasAnticipo" class="form-control" step="0.01" />
+        <div class="mb-4">
+            <div class="form-check">
+                <InputCheckbox Value="_tieneAnticipoCuenta" ValueChanged="OnAnticipoToggle" class="form-check-input" id="tieneAnticipo" />
+                <label class="form-check-label" for="tieneAnticipo">
+                    Tuve anticipo a cuenta (2%) este mes
+                </label>
+            </div>
+            <p class="form-text ms-4 mb-0">
+                La mayoría de contribuyentes no necesita esto. Marque solo si sabe que le aplicaron o pagó el adelanto del 2% en operaciones con CCF.
+            </p>
+        </div>
+
+        @if (_tieneAnticipoCuenta)
+        {
+            <div class="card mb-4">
+                <div class="card-header fw-semibold">Anticipo a cuenta (2%)</div>
+                <div class="card-body">
+                    <p class="small text-muted">
+                        Es distinto del IVA del 13%. Si sus clientes pagaron el 2% sobre sus ventas CCF, ingréselo en <strong>anticipo recibido</strong> (casilla 171).
+                        Si usted pagó el 2% al comprar, ingréselo en <strong>anticipo pagado</strong> (casilla 165).
+                    </p>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Base ventas CCF con anticipo <span class="text-muted">(sin IVA)</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">US$</span>
+                                <InputNumber @bind-Value="_entrada.BaseVentasSujetasAnticipo" class="form-control" step="0.01" />
+                            </div>
+                            <div class="form-text">Opcional — calcula el 2% para casilla 171</div>
+                            @if (_entrada.BaseVentasSujetasAnticipo > 0 && _entrada.AnticipoRecibidoVentas == 0)
+                            {
+                                <div class="form-text text-primary">→ Anticipo recibido: US$ @AnticipoDesdeBase(_entrada.BaseVentasSujetasAnticipo).ToString("N2")</div>
+                            }
                         </div>
-                        <div class="form-text">Opcional — calcula el 2% para casilla 171</div>
-                        @if (_entrada.BaseVentasSujetasAnticipo > 0 && _entrada.AnticipoRecibidoVentas == 0)
-                        {
-                            <div class="form-text text-primary">→ Anticipo recibido: US$ @AnticipoDesdeBase(_entrada.BaseVentasSujetasAnticipo).ToString("N2")</div>
-                        }
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Anticipo recibido en ventas</label>
-                        <div class="input-group">
-                            <span class="input-group-text">US$</span>
-                            <InputNumber @bind-Value="_entrada.AnticipoRecibidoVentas" class="form-control" step="0.01" />
+                        <div class="col-md-6">
+                            <label class="form-label">Anticipo recibido en ventas</label>
+                            <div class="input-group">
+                                <span class="input-group-text">US$</span>
+                                <InputNumber @bind-Value="_entrada.AnticipoRecibidoVentas" class="form-control" step="0.01" />
+                            </div>
+                            <div class="form-text">Casilla 171 — si ya tiene el total del 2%</div>
                         </div>
-                        <div class="form-text">Casilla 171 — use si ya tiene el total del 2%</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Base compras CCF con anticipo <span class="text-muted">(sin IVA)</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text">US$</span>
-                            <InputNumber @bind-Value="_entrada.BaseComprasSujetasAnticipo" class="form-control" step="0.01" />
+                        <div class="col-md-6">
+                            <label class="form-label">Base compras CCF con anticipo <span class="text-muted">(sin IVA)</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">US$</span>
+                                <InputNumber @bind-Value="_entrada.BaseComprasSujetasAnticipo" class="form-control" step="0.01" />
+                            </div>
+                            <div class="form-text">Opcional — calcula el 2% para casilla 165</div>
+                            @if (_entrada.BaseComprasSujetasAnticipo > 0 && _entrada.AnticipoPagadoCompras == 0)
+                            {
+                                <div class="form-text text-primary">→ Anticipo pagado: US$ @AnticipoDesdeBase(_entrada.BaseComprasSujetasAnticipo).ToString("N2")</div>
+                            }
                         </div>
-                        <div class="form-text">Opcional — calcula el 2% para casilla 165</div>
-                        @if (_entrada.BaseComprasSujetasAnticipo > 0 && _entrada.AnticipoPagadoCompras == 0)
-                        {
-                            <div class="form-text text-primary">→ Anticipo pagado: US$ @AnticipoDesdeBase(_entrada.BaseComprasSujetasAnticipo).ToString("N2")</div>
-                        }
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Anticipo pagado en compras</label>
-                        <div class="input-group">
-                            <span class="input-group-text">US$</span>
-                            <InputNumber @bind-Value="_entrada.AnticipoPagadoCompras" class="form-control" step="0.01" />
+                        <div class="col-md-6">
+                            <label class="form-label">Anticipo pagado en compras</label>
+                            <div class="input-group">
+                                <span class="input-group-text">US$</span>
+                                <InputNumber @bind-Value="_entrada.AnticipoPagadoCompras" class="form-control" step="0.01" />
+                            </div>
+                            <div class="form-text">Casilla 165</div>
                         </div>
-                        <div class="form-text">Casilla 165 — obligación como agente de retención</div>
                     </div>
                 </div>
             </div>
-        </div>
+        }
 
         <div class="card mb-4">
             <div class="card-header fw-semibold">Crédito del período anterior</div>
@@ -241,6 +254,19 @@
     private EntradaDeclaracion _entrada = new();
     private ResultadoDeclaracion? _resultado;
     private bool _generando;
+    private bool _tieneAnticipoCuenta;
+
+    private void OnAnticipoToggle(bool value)
+    {
+        _tieneAnticipoCuenta = value;
+        if (!value)
+        {
+            _entrada.BaseVentasSujetasAnticipo = 0;
+            _entrada.AnticipoRecibidoVentas = 0;
+            _entrada.BaseComprasSujetasAnticipo = 0;
+            _entrada.AnticipoPagadoCompras = 0;
+        }
+    }
 
     private async Task Calcular()
     {

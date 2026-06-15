@@ -12,6 +12,12 @@ services:
     networks:
       - deciva_network
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   ui-deciva:
     build:
@@ -26,7 +32,8 @@ services:
       ASPNETCORE_ENVIRONMENT: "Production"
       DB_CONNECTION: ${DB_CONNECTION}
     depends_on:
-      - db-deciva
+      db-deciva:
+        condition: service_healthy
     networks:
       - deciva_network
     restart: always
