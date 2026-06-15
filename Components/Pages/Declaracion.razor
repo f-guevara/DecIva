@@ -116,7 +116,7 @@
 
         <div class="mb-4">
             <div class="form-check">
-                <InputCheckbox Value="_tieneAnticipoCuenta" ValueChanged="OnAnticipoToggle" class="form-check-input" id="tieneAnticipo" />
+                <InputCheckbox @bind-Value="TieneAnticipoCuenta" class="form-check-input" id="tieneAnticipo" />
                 <label class="form-check-label" for="tieneAnticipo">
                     Tuve anticipo a cuenta (2%) este mes
                 </label>
@@ -126,7 +126,7 @@
             </p>
         </div>
 
-        @if (_tieneAnticipoCuenta)
+        @if (TieneAnticipoCuenta)
         {
             <div class="card mb-4">
                 <div class="card-header fw-semibold">Anticipo a cuenta (2%)</div>
@@ -256,15 +256,22 @@
     private bool _generando;
     private bool _tieneAnticipoCuenta;
 
-    private void OnAnticipoToggle(bool value)
+    private bool TieneAnticipoCuenta
     {
-        _tieneAnticipoCuenta = value;
-        if (!value)
+        get => _tieneAnticipoCuenta;
+        set
         {
-            _entrada.BaseVentasSujetasAnticipo = 0;
-            _entrada.AnticipoRecibidoVentas = 0;
-            _entrada.BaseComprasSujetasAnticipo = 0;
-            _entrada.AnticipoPagadoCompras = 0;
+            if (_tieneAnticipoCuenta == value)
+                return;
+
+            _tieneAnticipoCuenta = value;
+            if (!value)
+            {
+                _entrada.BaseVentasSujetasAnticipo = 0;
+                _entrada.AnticipoRecibidoVentas = 0;
+                _entrada.BaseComprasSujetasAnticipo = 0;
+                _entrada.AnticipoPagadoCompras = 0;
+            }
         }
     }
 
