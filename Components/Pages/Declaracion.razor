@@ -1,203 +1,274 @@
-@page "/declaracion"
-@rendermode InteractiveServer
-@inject CalculadoraIvaService Calculadora
-@inject GeneradorPdfDeclaracionService GeneradorPdf
-@inject IJSRuntime JS
-
-<PageTitle>Declaración de IVA</PageTitle>
-
-<div class="container py-4" style="max-width: 780px;">
-    <h1 class="mb-2">Declaración de IVA</h1>
-    <p class="text-muted mb-4">
-        Ingrese los totales del mes. Elija <strong>Sin IVA</strong> o <strong>Con IVA</strong> según
-        cómo tenga sus documentos — puede ser distinto para CCF y facturas.
-    </p>
-
-    <div class="alert alert-info small mb-4">
-        <strong>¿Cómo sé cuál elegir?</strong>
-        <ul class="mb-0 mt-2">
-            <li><strong>CCF:</strong> el documento muestra el monto gravado y el IVA por separado → use <em>Sin IVA</em> y sume la columna gravada.</li>
-            <li><strong>Facturas consumidor final:</strong> el ticket suele traer un solo total → use <em>Con IVA</em> y sume lo que pagó el cliente.</li>
-        </ul>
-    </div>
-
-    <EditForm Model="_entrada" OnValidSubmit="Calcular">
-        <DataAnnotationsValidator />
-
-        <div class="card mb-4">
-            <div class="card-header fw-semibold">Identificación</div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">NIT</label>
-                        <InputText @bind-Value="_entrada.Nit" class="form-control" placeholder="0000-000000-000-0" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">NRC</label>
-                        <InputText @bind-Value="_entrada.Nrc" class="form-control" placeholder="000000-0" />
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">Razón social / Nombre</label>
-                        <InputText @bind-Value="_entrada.RazonSocial" class="form-control" />
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">Nombre comercial <span class="text-muted">(opcional)</span></label>
-                        <InputText @bind-Value="_entrada.NombreComercial" class="form-control" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Mes</label>
-                        <InputSelect @bind-Value="_entrada.Mes" class="form-select">
-                            @for (var m = 1; m <= 12; m++)
-                            {
-                                <option value="@m">@NombreMes(m)</option>
-                            }
-                        </InputSelect>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Año</label>
-                        <InputNumber @bind-Value="_entrada.Anio" class="form-control" />
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header fw-semibold">Ventas del período</div>
-            <div class="card-body">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <CampoMontoIva Label="Ventas con CCF"
-                                       Casilla="85"
-                                       TipoDocumento="TipoDocumentoFiscal.ComprobanteCreditoFiscal"
-                                       @bind-Monto="_entrada.VentasCcf"
-                                       @bind-Modo="_entrada.VentasCcfModo" />
-                    </div>
-                    <div class="col-md-6">
-                        <CampoMontoIva Label="Ventas con factura consumidor final"
-                                       Casilla="86"
-                                       TipoDocumento="TipoDocumentoFiscal.FacturaConsumidorFinal"
-                                       @bind-Monto="_entrada.VentasFactura"
-                                       @bind-Modo="_entrada.VentasFacturaModo" />
-                    </div>
-                    <div class="col-md-6">
-                        <CampoMontoIva Label="Devoluciones sobre ventas"
-                                       Casilla="87"
-                                       TipoDocumento="TipoDocumentoFiscal.ComprobanteCreditoFiscal"
-                                       @bind-Monto="_entrada.DevolucionesVentas"
-                                       @bind-Modo="_entrada.DevolucionesVentasModo" />
-                        <p class="form-text mt-1">0 si no tuvo devoluciones este mes.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header fw-semibold">Compras del período</div>
-            <div class="card-body">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <CampoMontoIva Label="Compras gravadas con CCF"
-                                       Casilla="80"
-                                       TipoDocumento="TipoDocumentoFiscal.ComprobanteCreditoFiscal"
-                                       @bind-Monto="_entrada.ComprasGravadas"
-                                       @bind-Modo="_entrada.ComprasGravadasModo" />
-                    </div>
-                    <div class="col-md-6">
-                        <CampoMontoIva Label="Devoluciones sobre compras"
-                                       Casilla="81"
-                                       TipoDocumento="TipoDocumentoFiscal.ComprobanteCreditoFiscal"
-                                       @bind-Monto="_entrada.DevolucionesCompras"
-                                       @bind-Modo="_entrada.DevolucionesComprasModo" />
-                        <p class="form-text mt-1">0 si no tuvo devoluciones este mes.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header fw-semibold">Crédito del período anterior</div>
-            <div class="card-body">
-                <div class="col-md-6">
-                    <label class="form-label">Remanente de crédito</label>
-                    <div class="input-group">
-                        <span class="input-group-text">US$</span>
-                        <InputNumber @bind-Value="_entrada.RemanenteCreditoAnterior" class="form-control" step="0.01" />
-                    </div>
-                    <div class="form-text">Casilla 110 — ya viene sin IVA. Use 0 si es su primera declaración.</div>
-                </div>
-            </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-lg w-100" disabled="@_generando">
-            @if (_generando)
-            {
-                <span>Generando PDF...</span>
-            }
-            else
-            {
-                <span>Calcular y descargar PDF</span>
-            }
-        </button>
-    </EditForm>
-
-    @if (_resultado is not null)
-    {
-        <div class="card mt-4 border-success">
-            <div class="card-header bg-success text-white fw-semibold">Resultado</div>
-            <div class="card-body">
-                @if (_resultado.TieneImpuestoAPagar)
-                {
-                    <p class="mb-0 fs-5">
-                        Impuesto a pagar: <strong class="text-danger">US$ @_resultado.ImpuestoDeterminado.ToString("N2")</strong>
-                        <span class="text-muted">(casilla 160)</span>
-                    </p>
-                }
-                else if (_resultado.TieneSaldoAFavor)
-                {
-                    <p class="mb-0 fs-5">
-                        Saldo a favor: <strong class="text-success">US$ @_resultado.RemanenteProximoPeriodo.ToString("N2")</strong>
-                        <span class="text-muted">(casilla 155 — usar en casilla 110 el próximo mes)</span>
-                    </p>
-                }
-                else
-                {
-                    <p class="mb-0 fs-5">Sin impuesto a pagar ni saldo a favor.</p>
-                }
-                <p class="text-muted mt-2 mb-0 small">El PDF con todas las casillas se descargó automáticamente.</p>
-            </div>
-        </div>
-    }
-</div>
-
-@code {
-    private EntradaDeclaracion _entrada = new();
-    private ResultadoDeclaracion? _resultado;
-    private bool _generando;
-
-    private async Task Calcular()
-    {
-        _generando = true;
-        _resultado = null;
-
-        try
-        {
-            _resultado = Calculadora.Calcular(_entrada);
-            var pdf = GeneradorPdf.Generar(_resultado);
-            var nombre = $"guia-iva-{_entrada.Mes:D2}-{_entrada.Anio}.pdf";
-            await JS.InvokeVoidAsync("decIva.downloadPdf", nombre, Convert.ToBase64String(pdf));
-        }
-        finally
-        {
-            _generando = false;
-        }
-    }
-
-    private static string NombreMes(int mes) => mes switch
-    {
-        1 => "Enero", 2 => "Febrero", 3 => "Marzo", 4 => "Abril",
-        5 => "Mayo", 6 => "Junio", 7 => "Julio", 8 => "Agosto",
-        9 => "Septiembre", 10 => "Octubre", 11 => "Noviembre", 12 => "Diciembre",
-        _ => mes.ToString()
-    };
-}
-
+@page "/declaracion"
+@rendermode InteractiveServer
+@inject CalculadoraIvaService Calculadora
+@inject GeneradorPdfDeclaracionService GeneradorPdf
+@inject IJSRuntime JS
+
+<PageTitle>Declaración de IVA</PageTitle>
+
+<div class="container py-4" style="max-width: 780px;">
+    <h1 class="mb-2">Declaración de IVA</h1>
+    <p class="text-muted mb-4">
+        Ingrese los totales del mes. Elija <strong>Sin IVA</strong> o <strong>Con IVA</strong> según
+        cómo tenga sus documentos — puede ser distinto para CCF y facturas.
+    </p>
+
+    <div class="alert alert-info small mb-4">
+        <strong>¿Cómo sé cuál elegir?</strong>
+        <ul class="mb-0 mt-2">
+            <li><strong>CCF:</strong> el documento muestra el monto gravado y el IVA por separado → use <em>Sin IVA</em> y sume la columna gravada.</li>
+            <li><strong>Facturas consumidor final:</strong> el ticket suele traer un solo total → use <em>Con IVA</em> y sume lo que pagó el cliente.</li>
+        </ul>
+    </div>
+
+    <EditForm Model="_entrada" OnValidSubmit="Calcular">
+        <DataAnnotationsValidator />
+
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Identificación</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">NIT</label>
+                        <InputText @bind-Value="_entrada.Nit" class="form-control" placeholder="0000-000000-000-0" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">NRC</label>
+                        <InputText @bind-Value="_entrada.Nrc" class="form-control" placeholder="000000-0" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Razón social / Nombre</label>
+                        <InputText @bind-Value="_entrada.RazonSocial" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Nombre comercial <span class="text-muted">(opcional)</span></label>
+                        <InputText @bind-Value="_entrada.NombreComercial" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Mes</label>
+                        <InputSelect @bind-Value="_entrada.Mes" class="form-select">
+                            @for (var m = 1; m <= 12; m++)
+                            {
+                                <option value="@m">@NombreMes(m)</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Año</label>
+                        <InputNumber @bind-Value="_entrada.Anio" class="form-control" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Ventas del período</div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <CampoMontoIva Label="Ventas con CCF"
+                                       Casilla="85"
+                                       TipoDocumento="TipoDocumentoFiscal.ComprobanteCreditoFiscal"
+                                       @bind-Monto="_entrada.VentasCcf"
+                                       @bind-Modo="_entrada.VentasCcfModo" />
+                    </div>
+                    <div class="col-md-6">
+                        <CampoMontoIva Label="Ventas con factura consumidor final"
+                                       Casilla="86"
+                                       TipoDocumento="TipoDocumentoFiscal.FacturaConsumidorFinal"
+                                       @bind-Monto="_entrada.VentasFactura"
+                                       @bind-Modo="_entrada.VentasFacturaModo" />
+                    </div>
+                    <div class="col-md-6">
+                        <CampoMontoIva Label="Devoluciones sobre ventas"
+                                       Casilla="87"
+                                       TipoDocumento="TipoDocumentoFiscal.ComprobanteCreditoFiscal"
+                                       @bind-Monto="_entrada.DevolucionesVentas"
+                                       @bind-Modo="_entrada.DevolucionesVentasModo" />
+                        <p class="form-text mt-1">0 si no tuvo devoluciones este mes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Compras del período</div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <CampoMontoIva Label="Compras gravadas con CCF"
+                                       Casilla="80"
+                                       TipoDocumento="TipoDocumentoFiscal.ComprobanteCreditoFiscal"
+                                       @bind-Monto="_entrada.ComprasGravadas"
+                                       @bind-Modo="_entrada.ComprasGravadasModo" />
+                    </div>
+                    <div class="col-md-6">
+                        <CampoMontoIva Label="Devoluciones sobre compras"
+                                       Casilla="81"
+                                       TipoDocumento="TipoDocumentoFiscal.ComprobanteCreditoFiscal"
+                                       @bind-Monto="_entrada.DevolucionesCompras"
+                                       @bind-Modo="_entrada.DevolucionesComprasModo" />
+                        <p class="form-text mt-1">0 si no tuvo devoluciones este mes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Anticipo a cuenta (2%) <span class="text-muted fw-normal">opcional</span></div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    El anticipo a cuenta del <strong>2%</strong> es distinto del IVA del 13%.
+                    Las ventas y compras siguen declarándose con IVA normal en las casillas 85/80.
+                    El anticipo recibido en sus ventas CCF <strong>reduce</strong> el impuesto (casilla 168).
+                    El anticipo que usted pagó al comprar se declara aparte (casilla 165).
+                </p>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Base ventas CCF con anticipo <span class="text-muted">(sin IVA)</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">US$</span>
+                            <InputNumber @bind-Value="_entrada.BaseVentasSujetasAnticipo" class="form-control" step="0.01" />
+                        </div>
+                        <div class="form-text">Opcional — calcula el 2% para casilla 171</div>
+                        @if (_entrada.BaseVentasSujetasAnticipo > 0 && _entrada.AnticipoRecibidoVentas == 0)
+                        {
+                            <div class="form-text text-primary">→ Anticipo recibido: US$ @AnticipoDesdeBase(_entrada.BaseVentasSujetasAnticipo).ToString("N2")</div>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Anticipo recibido en ventas</label>
+                        <div class="input-group">
+                            <span class="input-group-text">US$</span>
+                            <InputNumber @bind-Value="_entrada.AnticipoRecibidoVentas" class="form-control" step="0.01" />
+                        </div>
+                        <div class="form-text">Casilla 171 — use si ya tiene el total del 2%</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Base compras CCF con anticipo <span class="text-muted">(sin IVA)</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">US$</span>
+                            <InputNumber @bind-Value="_entrada.BaseComprasSujetasAnticipo" class="form-control" step="0.01" />
+                        </div>
+                        <div class="form-text">Opcional — calcula el 2% para casilla 165</div>
+                        @if (_entrada.BaseComprasSujetasAnticipo > 0 && _entrada.AnticipoPagadoCompras == 0)
+                        {
+                            <div class="form-text text-primary">→ Anticipo pagado: US$ @AnticipoDesdeBase(_entrada.BaseComprasSujetasAnticipo).ToString("N2")</div>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Anticipo pagado en compras</label>
+                        <div class="input-group">
+                            <span class="input-group-text">US$</span>
+                            <InputNumber @bind-Value="_entrada.AnticipoPagadoCompras" class="form-control" step="0.01" />
+                        </div>
+                        <div class="form-text">Casilla 165 — obligación como agente de retención</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Crédito del período anterior</div>
+            <div class="card-body">
+                <div class="col-md-6">
+                    <label class="form-label">Remanente de crédito</label>
+                    <div class="input-group">
+                        <span class="input-group-text">US$</span>
+                        <InputNumber @bind-Value="_entrada.RemanenteCreditoAnterior" class="form-control" step="0.01" />
+                    </div>
+                    <div class="form-text">Casilla 110 — ya viene sin IVA. Use 0 si es su primera declaración.</div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-100" disabled="@_generando">
+            @if (_generando)
+            {
+                <span>Generando PDF...</span>
+            }
+            else
+            {
+                <span>Calcular y descargar PDF</span>
+            }
+        </button>
+    </EditForm>
+
+    @if (_resultado is not null)
+    {
+        <div class="card mt-4 border-success">
+            <div class="card-header bg-success text-white fw-semibold">Resultado</div>
+            <div class="card-body">
+                @if (_resultado.TieneImpuestoAPagar)
+                {
+                    <p class="mb-0 fs-5">
+                        Impuesto neto a pagar: <strong class="text-danger">US$ @_resultado.ImpuestoNetoOperaciones.ToString("N2")</strong>
+                        <span class="text-muted">(casilla 168)</span>
+                    </p>
+                    @if (_resultado.ImpuestoDeterminado > _resultado.ImpuestoNetoOperaciones)
+                    {
+                        <p class="text-muted small mb-0 mt-1">
+                            Impuesto determinado (160): US$ @_resultado.ImpuestoDeterminado.ToString("N2")
+                            − anticipo recibido (171): US$ @_resultado.AnticipoRecibidoVentas.ToString("N2")
+                        </p>
+                    }
+                }
+                else if (_resultado.TieneSaldoAFavor)
+                {
+                    <p class="mb-0 fs-5">
+                        Saldo a favor: <strong class="text-success">US$ @_resultado.RemanenteProximoPeriodo.ToString("N2")</strong>
+                        <span class="text-muted">(casilla 155 — usar en casilla 110 el próximo mes)</span>
+                    </p>
+                }
+                else
+                {
+                    <p class="mb-0 fs-5">Sin impuesto a pagar ni saldo a favor.</p>
+                }
+                @if (_resultado.DebeDeclararAnticipoPagado)
+                {
+                    <p class="mb-0 mt-2">
+                        Anticipo pagado a declarar: <strong>US$ @_resultado.AnticipoPagadoCompras.ToString("N2")</strong>
+                        <span class="text-muted">(casilla 165 — sección E del F07)</span>
+                    </p>
+                }
+                <p class="text-muted mt-2 mb-0 small">El PDF con todas las casillas se descargó automáticamente.</p>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private EntradaDeclaracion _entrada = new();
+    private ResultadoDeclaracion? _resultado;
+    private bool _generando;
+
+    private async Task Calcular()
+    {
+        _generando = true;
+        _resultado = null;
+
+        try
+        {
+            _resultado = Calculadora.Calcular(_entrada);
+            var pdf = GeneradorPdf.Generar(_resultado);
+            var nombre = $"guia-iva-{_entrada.Mes:D2}-{_entrada.Anio}.pdf";
+            await JS.InvokeVoidAsync("decIva.downloadPdf", nombre, Convert.ToBase64String(pdf));
+        }
+        finally
+        {
+            _generando = false;
+        }
+    }
+
+    private static decimal AnticipoDesdeBase(decimal baseGravable) =>
+        IvaUtilidades.CalcularAnticipoCuenta(baseGravable);
+
+    private static string NombreMes(int mes) => mes switch
+    {
+        1 => "Enero", 2 => "Febrero", 3 => "Marzo", 4 => "Abril",
+        5 => "Mayo", 6 => "Junio", 7 => "Julio", 8 => "Agosto",
+        9 => "Septiembre", 10 => "Octubre", 11 => "Noviembre", 12 => "Diciembre",
+        _ => mes.ToString()
+    };
+}
+

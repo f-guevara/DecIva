@@ -89,7 +89,7 @@ public class GeneradorPdfDeclaracionService
 
                         foreach (var casilla in resultado.Casillas)
                         {
-                            var destacar = casilla.Numero is 155 or 160;
+                            var destacar = casilla.Numero is 155 or 160 or 168;
                             var fondo = destacar ? Colors.Blue.Lighten5 : Colors.White;
 
                             table.Cell().Background(fondo).BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
@@ -109,10 +109,15 @@ public class GeneradorPdfDeclaracionService
                         {
                             resumen.Item().PaddingTop(6).Text(text =>
                             {
-                                text.Span("Impuesto a pagar este período: ").Bold();
-                                text.Span($"US$ {FormatearMonto(resultado.ImpuestoDeterminado)}").Bold().FontColor(Colors.Red.Darken1);
+                                text.Span("Impuesto neto por operaciones: ").Bold();
+                                text.Span($"US$ {FormatearMonto(resultado.ImpuestoNetoOperaciones)}").Bold().FontColor(Colors.Red.Darken1);
                             });
-                            resumen.Item().PaddingTop(4).Text("Ingrese este monto en la casilla 160 del formulario F07.");
+                            resumen.Item().PaddingTop(4).Text("Ingrese este monto en la casilla 168 del formulario F07.");
+                            if (resultado.AnticipoRecibidoVentas > 0)
+                            {
+                                resumen.Item().PaddingTop(4).Text(
+                                    $"Incluye descuento por anticipo recibido (171): US$ {FormatearMonto(resultado.AnticipoRecibidoVentas)}");
+                            }
                         }
                         else if (resultado.TieneSaldoAFavor)
                         {
@@ -126,6 +131,17 @@ public class GeneradorPdfDeclaracionService
                         else
                         {
                             resumen.Item().PaddingTop(6).Text("No hay impuesto a pagar ni saldo a favor este período.").Bold();
+                        }
+
+                        if (resultado.DebeDeclararAnticipoPagado)
+                        {
+                            resumen.Item().PaddingTop(8).Text(text =>
+                            {
+                                text.Span("Anticipo pagado en compras (casilla 165): ").Bold();
+                                text.Span($"US$ {FormatearMonto(resultado.AnticipoPagadoCompras)}");
+                            });
+                            resumen.Item().PaddingTop(4).Text(
+                                "Declare este monto en la sección E del F07. Es independiente del impuesto de operaciones.");
                         }
                     });
                 });

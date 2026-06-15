@@ -13,6 +13,11 @@ public class CalculadoraIvaService
         var devolucionesCompras = IvaUtilidades.ABaseGravable(entrada.DevolucionesCompras, entrada.DevolucionesComprasModo);
         var remanenteAnterior = entrada.RemanenteCreditoAnterior;
 
+        var anticipoRecibido = IvaUtilidades.ResolverAnticipo(
+            entrada.AnticipoRecibidoVentas, entrada.BaseVentasSujetasAnticipo);
+        var anticipoPagado = IvaUtilidades.ResolverAnticipo(
+            entrada.AnticipoPagadoCompras, entrada.BaseComprasSujetasAnticipo);
+
         var sumaVentas = ventasCcf + ventasFactura - devolucionesVentas;
         var sumaCompras = comprasGravadas - devolucionesCompras;
 
@@ -27,6 +32,11 @@ public class CalculadoraIvaService
 
         var remanenteProximo = sumaCreditos > sumaDebitos ? sumaCreditos - sumaDebitos : 0m;
         var impuestoDeterminado = sumaDebitos > sumaCreditos ? sumaDebitos - sumaCreditos : 0m;
+
+        var totalFavorDeclarante = anticipoRecibido;
+        var impuestoNetoOperaciones = impuestoDeterminado > totalFavorDeclarante
+            ? impuestoDeterminado - totalFavorDeclarante
+            : 0m;
 
         var casillas = new List<CasillaIva>
         {
@@ -47,6 +57,10 @@ public class CalculadoraIvaService
             new(150, "Suma de débitos", sumaDebitos),
             new(155, "Remanente de crédito para el próximo período", remanenteProximo),
             new(160, "Impuesto determinado", impuestoDeterminado),
+            new(171, "Anticipo a cuenta IVA 2% efectuado al declarante (en sus ventas CCF)", anticipoRecibido),
+            new(166, "Total retención, percepción y anticipo a cuenta a favor del declarante", totalFavorDeclarante),
+            new(168, "Impuesto neto por operaciones del período (160 − 166)", impuestoNetoOperaciones),
+            new(165, "Anticipo a cuenta IVA 2% efectuado por el declarante (en sus compras CCF)", anticipoPagado),
         };
 
         return new ResultadoDeclaracion
@@ -54,6 +68,10 @@ public class CalculadoraIvaService
             Entrada = entrada,
             Casillas = casillas,
             ImpuestoDeterminado = impuestoDeterminado,
+            AnticipoRecibidoVentas = anticipoRecibido,
+            AnticipoPagadoCompras = anticipoPagado,
+            TotalFavorDeclarante = totalFavorDeclarante,
+            ImpuestoNetoOperaciones = impuestoNetoOperaciones,
             RemanenteProximoPeriodo = remanenteProximo,
         };
     }
