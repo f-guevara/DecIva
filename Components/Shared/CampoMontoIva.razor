@@ -1,0 +1,95 @@
+@using DecIva.Models
+@using DecIva.Services
+
+<div class="campo-monto-iva">
+    <label class="form-label">@Label</label>
+
+    <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+        <button type="button"
+                class="btn @(Modo == ModoIngresoMonto.BaseSinIva ? "btn-primary" : "btn-outline-secondary")"
+                @onclick="() => CambiarModo(ModoIngresoMonto.BaseSinIva)">
+            Sin IVA
+            @if (ModoRecomendado == ModoIngresoMonto.BaseSinIva)
+            {
+                <span class="badge bg-light text-primary ms-1">recomendado</span>
+            }
+        </button>
+        <button type="button"
+                class="btn @(Modo == ModoIngresoMonto.TotalConIva ? "btn-primary" : "btn-outline-secondary")"
+                @onclick="() => CambiarModo(ModoIngresoMonto.TotalConIva)">
+            Con IVA
+            @if (ModoRecomendado == ModoIngresoMonto.TotalConIva)
+            {
+                <span class="badge bg-light text-primary ms-1">recomendado</span>
+            }
+        </button>
+    </div>
+
+    <p class="form-text mb-2">@AyudaModoActual</p>
+
+    <div class="input-group">
+        <span class="input-group-text">US$</span>
+        <input type="number"
+               class="form-control"
+               step="0.01"
+               min="0"
+               value="@Monto"
+               @onchange="OnMontoChanged" />
+    </div>
+
+    <div class="form-text">Casilla @Casilla</div>
+
+    @if (Monto > 0 && Modo == ModoIngresoMonto.TotalConIva)
+    {
+        <div class="alert alert-light border py-2 px-3 mt-2 mb-0 small">
+            <strong>Base para el F07:</strong> US$ @BaseGravable.ToString("N2")
+            <span class="text-muted">(IVA US$ @IvaCalculado.ToString("N2"))</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public int Casilla { get; set; }
+    [Parameter, EditorRequired] public TipoDocumentoFiscal TipoDocumento { get; set; }
+    [Parameter] public decimal Monto { get; set; }
+    [Parameter] public EventCallback<decimal> MontoChanged { get; set; }
+    [Parameter] public ModoIngresoMonto Modo { get; set; }
+    [Parameter] public EventCallback<ModoIngresoMonto> ModoChanged { get; set; }
+
+    private ModoIngresoMonto ModoRecomendado => IvaUtilidades.ModoRecomendado(TipoDocumento);
+
+    private decimal BaseGravable => IvaUtilidades.ABaseGravable(Monto, Modo);
+    private decimal IvaCalculado => IvaUtilidades.CalcularIva(BaseGravable);
+
+    private string AyudaModoActual => (TipoDocumento, Modo) switch
+    {
+        (TipoDocumentoFiscal.ComprobanteCreditoFiscal, ModoIngresoMonto.BaseSinIva) =>
+            "Sume la columna de ventas o compras gravadas de sus CCF (el monto antes del IVA).",
+        (TipoDocumentoFiscal.ComprobanteCreditoFiscal, ModoIngresoMonto.TotalConIva) =>
+            "Use esta opción solo si no tiene el desglose y sumó el total con IVA de sus CCF.",
+        (TipoDocumentoFiscal.FacturaConsumidorFinal, ModoIngresoMonto.TotalConIva) =>
+            "Sume el total a pagar de sus facturas de consumidor final (como aparece en el ticket).",
+        (TipoDocumentoFiscal.FacturaConsumidorFinal, ModoIngresoMonto.BaseSinIva) =>
+            "Use esta opción si ya calculó o tiene el monto gravado sin IVA.",
+        _ => string.Empty
+    };
+
+    private async Task CambiarModo(ModoIngresoMonto nuevoModo)
+    {
+        if (Modo == nuevoModo)
+            return;
+
+        Modo = nuevoModo;
+        await ModoChanged.InvokeAsync(nuevoModo);
+    }
+
+    private async Task OnMontoChanged(ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out var valor))
+        {
+            Monto = valor;
+            await MontoChanged.InvokeAsync(valor);
+        }
+    }
+}
