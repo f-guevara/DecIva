@@ -57,8 +57,6 @@ mkdir -p /opt/deciva
 
 > La contraseña de PostgreSQL NO debe tener caracteres especiales (va dentro de la cadena de conexión).
 
-> **Desarrollo local:** el proyecto usa SQL Server LocalDB del template de Identity. Para deploy en VPS migrar a PostgreSQL (mismo patrón que DataGenerator).
-
 ---
 
 ## Proceso: deploy en VPS nuevo
@@ -89,6 +87,17 @@ docker network connect deciva_network npm
 - **Websockets Support:** ON — obligatorio para Blazor Server
 - **Block Common Exploits:** ON
 - **SSL:** Let's Encrypt, Force SSL, HTTP/2, HSTS
+
+---
+
+## Desarrollo local (opcional)
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+La app aplica migraciones automáticamente al arrancar.
 
 ---
 
