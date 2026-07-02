@@ -1,7 +1,4 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core \
-    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 EXPOSE 8080
 

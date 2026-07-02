@@ -202,7 +202,7 @@
             }
             else
             {
-                <span>Calcular y descargar PDF</span>
+                <span>Calcular y descargar F07</span>
             }
         </button>
     </EditForm>
@@ -244,7 +244,7 @@
                         <span class="text-muted">(casilla 165 — sección E del F07)</span>
                     </p>
                 }
-                <p class="text-muted mt-2 mb-0 small">El PDF con todas las casillas se descargó automáticamente.</p>
+                <p class="text-muted mt-2 mb-0 small">Se descargó el formulario F07 con sus datos. Revíselo y transcríbalo al portal del MH.</p>
             </div>
         </div>
     }
@@ -284,7 +284,7 @@
         {
             _resultado = Calculadora.Calcular(_entrada);
             var pdf = GeneradorPdf.Generar(_resultado);
-            var nombre = $"guia-iva-{_entrada.Mes:D2}-{_entrada.Anio}.pdf";
+            var nombre = GeneradorPdfDeclaracionService.NombreArchivo(_resultado);
             await JS.InvokeVoidAsync("decIva.downloadPdf", nombre, Convert.ToBase64String(pdf));
         }
         finally

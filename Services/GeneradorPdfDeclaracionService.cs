@@ -1,11 +1,13 @@
 using DecIva.Models;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
+using iText.IO.Font.Constants;
+using iText.Kernel.Colors;
+using iText.Kernel.Font;
+using iText.Kernel.Pdf;
+using iText.Kernel.Pdf.Canvas;
 
 namespace DecIva.Services;
 
-public class GeneradorPdfDeclaracionService
+public class GeneradorPdfDeclaracionService(IWebHostEnvironment entorno)
 {
     private static readonly string[] Meses =
     [
@@ -15,176 +17,135 @@ public class GeneradorPdfDeclaracionService
 
     public byte[] Generar(ResultadoDeclaracion resultado)
     {
-        var entrada = resultado.Entrada;
-        var periodo = $"{Meses[entrada.Mes]} {entrada.Anio}";
+        var plantilla = Path.Combine(entorno.ContentRootPath, F07PdfCoordenadas.RutaPlantilla);
+        if (!File.Exists(plantilla))
+            throw new FileNotFoundException("No se encontró la plantilla del formulario F07.", plantilla);
 
-        return Document.Create(container =>
+        using var plantillaStream = File.OpenRead(plantilla);
+        using var salida = new MemoryStream();
+        using var reader = new PdfReader(plantillaStream);
+        using var writer = new PdfWriter(salida);
+        using var pdf = new PdfDocument(reader, writer);
+
+        var fuente = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+        var fuenteNegrita = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+
+        LimpiarPlantilla(pdf);
+        EscribirIdentificacion(pdf, fuente, resultado.Entrada);
+        EscribirCasillas(pdf, fuente, resultado);
+        EscribirAvisoReferencia(pdf, fuenteNegrita);
+
+        pdf.Close();
+        return salida.ToArray();
+    }
+
+    private static void LimpiarPlantilla(PdfDocument pdf)
+    {
+        var regiones = F07PdfCoordenadas.Casillas.Values
+            .Concat(F07PdfCoordenadas.IdentificacionPagina1)
+            .Concat(F07PdfCoordenadas.IdentificacionPagina2)
+            .Concat(F07PdfCoordenadas.IdentificacionPagina3)
+            .Append(new CampoPdf(1, 493.8f, 747.6f, 70f, 11f, false))
+            .Append(new CampoPdf(2, 493.8f, 747.6f, 70f, 11f, false))
+            .Append(new CampoPdf(3, 493.8f, 747.6f, 70f, 11f, false))
+            .Append(new CampoPdf(1, 537.4f, 618.4f, 60f, 11f, false))
+            .Append(new CampoPdf(1, 180f, 618f, 320f, 11f, false))
+            .Append(new CampoPdf(1, 460f, 615.5f, 80f, 11f, false))
+            .Append(new CampoPdf(2, 448.7f, 150.4f, 120f, 11f, false))
+            .Append(new CampoPdf(2, 455f, 96.7f, 70f, 11f, false));
+
+        foreach (var region in regiones)
+            PintarRectanguloBlanco(pdf, region);
+    }
+
+    private static void EscribirIdentificacion(PdfDocument pdf, PdfFont fuente, EntradaDeclaracion entrada)
+    {
+        var mes = entrada.Mes.ToString();
+        var anio = entrada.Anio.ToString();
+        var nit = entrada.Nit.Trim();
+        var nrc = entrada.Nrc.Trim();
+        var razon = entrada.RazonSocial.Trim();
+        var comercial = entrada.NombreComercial?.Trim() ?? string.Empty;
+
+        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[0], fuente, mes, 9);
+        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[1], fuente, anio, 9);
+        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[2], fuente, nit, 9);
+        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[3], fuente, nrc, 9);
+        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[4], fuente, razon, 8);
+        if (!string.IsNullOrWhiteSpace(comercial))
+            EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[5], fuente, comercial, 8);
+
+        foreach (var pagina in new[] { F07PdfCoordenadas.IdentificacionPagina2, F07PdfCoordenadas.IdentificacionPagina3 })
         {
-            container.Page(page =>
-            {
-                page.Size(PageSizes.Letter);
-                page.Margin(40);
-                page.DefaultTextStyle(x => x.FontSize(10));
-
-                page.Header().Column(col =>
-                {
-                    col.Item().Text("Guía de datos para Declaración de IVA").Bold().FontSize(16);
-                    col.Item().PaddingTop(4).Text("Formulario F07 — Ministerio de Hacienda, El Salvador").FontSize(11).FontColor(Colors.Grey.Darken2);
-                    col.Item().PaddingTop(8).DefaultTextStyle(x => x.FontSize(9).FontColor(Colors.Grey.Darken1)).Text(text =>
-                    {
-                        text.Span("Este documento NO es la declaración oficial. ").Italic();
-                        text.Span("Use estos valores para llenar las casillas correspondientes en el portal de Hacienda.");
-                    });
-                });
-
-                page.Content().PaddingVertical(16).Column(col =>
-                {
-                    col.Item().Element(c => SeccionTitulo(c, "A. Identificación del contribuyente"));
-                    col.Item().PaddingTop(6).Table(table =>
-                    {
-                        table.ColumnsDefinition(columns =>
-                        {
-                            columns.ConstantColumn(120);
-                            columns.RelativeColumn();
-                        });
-
-                        FilaDato(table, "NIT", entrada.Nit);
-                        FilaDato(table, "NRC", entrada.Nrc);
-                        FilaDato(table, "Razón social", entrada.RazonSocial);
-                        if (!string.IsNullOrWhiteSpace(entrada.NombreComercial))
-                            FilaDato(table, "Nombre comercial", entrada.NombreComercial);
-                        FilaDato(table, "Período tributario", periodo);
-                    });
-
-                    col.Item().PaddingTop(20).Element(c => SeccionTitulo(c, "Casillas a ingresar en el formulario F07"));
-                    col.Item().PaddingTop(6).Text("Montos en dólares (US$). Las demás casillas no listadas deben quedar en 0.00.")
-                        .FontSize(9).FontColor(Colors.Grey.Darken1);
-
-                    var conversiones = ObtenerConversiones(entrada);
-                    if (conversiones.Count > 0)
-                    {
-                        col.Item().PaddingTop(6).Background(Colors.Yellow.Lighten4).Padding(8).Column(notas =>
-                        {
-                            notas.Item().Text("Montos convertidos de total con IVA a base gravable:").Bold().FontSize(9);
-                            foreach (var nota in conversiones)
-                                notas.Item().PaddingTop(2).Text(nota).FontSize(8);
-                        });
-                    }
-
-                    col.Item().PaddingTop(8).Table(table =>
-                    {
-                        table.ColumnsDefinition(columns =>
-                        {
-                            columns.ConstantColumn(50);
-                            columns.RelativeColumn(3);
-                            columns.ConstantColumn(90);
-                        });
-
-                        table.Header(header =>
-                        {
-                            header.Cell().Background(Colors.Grey.Lighten3).Padding(6).Text("Casilla").Bold();
-                            header.Cell().Background(Colors.Grey.Lighten3).Padding(6).Text("Descripción").Bold();
-                            header.Cell().Background(Colors.Grey.Lighten3).Padding(6).AlignRight().Text("Valor (US$)").Bold();
-                        });
-
-                        foreach (var casilla in resultado.Casillas)
-                        {
-                            var destacar = casilla.Numero is 155 or 160 or 168;
-                            var fondo = destacar ? Colors.Blue.Lighten5 : Colors.White;
-
-                            table.Cell().Background(fondo).BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                .Padding(6).Text(casilla.Numero.ToString()).Bold();
-                            table.Cell().Background(fondo).BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                .Padding(6).Text(casilla.Descripcion);
-                            table.Cell().Background(fondo).BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                .Padding(6).AlignRight().Text(FormatearMonto(casilla.Valor)).Bold();
-                        }
-                    });
-
-                    col.Item().PaddingTop(20).Background(Colors.Grey.Lighten4).Padding(12).Column(resumen =>
-                    {
-                        resumen.Item().Text("Resumen").Bold().FontSize(12);
-
-                        if (resultado.TieneImpuestoAPagar)
-                        {
-                            resumen.Item().PaddingTop(6).Text(text =>
-                            {
-                                text.Span("Impuesto neto por operaciones: ").Bold();
-                                text.Span($"US$ {FormatearMonto(resultado.ImpuestoNetoOperaciones)}").Bold().FontColor(Colors.Red.Darken1);
-                            });
-                            resumen.Item().PaddingTop(4).Text("Ingrese este monto en la casilla 168 del formulario F07.");
-                            if (resultado.AnticipoRecibidoVentas > 0)
-                            {
-                                resumen.Item().PaddingTop(4).Text(
-                                    $"Incluye descuento por anticipo recibido (171): US$ {FormatearMonto(resultado.AnticipoRecibidoVentas)}");
-                            }
-                        }
-                        else if (resultado.TieneSaldoAFavor)
-                        {
-                            resumen.Item().PaddingTop(6).Text(text =>
-                            {
-                                text.Span("Saldo a favor (remanente próximo período): ").Bold();
-                                text.Span($"US$ {FormatearMonto(resultado.RemanenteProximoPeriodo)}").Bold().FontColor(Colors.Green.Darken1);
-                            });
-                            resumen.Item().PaddingTop(4).Text("Ingrese este monto en la casilla 155. Guárdelo para la casilla 110 del próximo mes.");
-                        }
-                        else
-                        {
-                            resumen.Item().PaddingTop(6).Text("No hay impuesto a pagar ni saldo a favor este período.").Bold();
-                        }
-
-                        if (resultado.DebeDeclararAnticipoPagado)
-                        {
-                            resumen.Item().PaddingTop(8).Text(text =>
-                            {
-                                text.Span("Anticipo pagado en compras (casilla 165): ").Bold();
-                                text.Span($"US$ {FormatearMonto(resultado.AnticipoPagadoCompras)}");
-                            });
-                            resumen.Item().PaddingTop(4).Text(
-                                "Declare este monto en la sección E del F07. Es independiente del impuesto de operaciones.");
-                        }
-                    });
-                });
-
-                page.Footer().AlignCenter().DefaultTextStyle(x => x.FontSize(8).FontColor(Colors.Grey.Medium)).Text(text =>
-                {
-                    text.Span("Generado por DecIva — ");
-                    text.Span(DateTime.Now.ToString("dd/MM/yyyy HH:mm"));
-                });
-            });
-        }).GeneratePdf();
+            EscribirTexto(pdf, pagina[0], fuente, mes, 9);
+            EscribirTexto(pdf, pagina[1], fuente, anio, 9);
+            EscribirTexto(pdf, pagina[2], fuente, nit, 9);
+            EscribirTexto(pdf, pagina[3], fuente, nrc, 9);
+        }
     }
 
-    private static void SeccionTitulo(IContainer container, string titulo) =>
-        container.Text(titulo).Bold().FontSize(12).FontColor(Colors.Blue.Darken2);
-
-    private static void FilaDato(TableDescriptor table, string etiqueta, string valor)
+    private static void EscribirCasillas(PdfDocument pdf, PdfFont fuente, ResultadoDeclaracion resultado)
     {
-        table.Cell().PaddingVertical(3).Text(etiqueta).SemiBold();
-        table.Cell().PaddingVertical(3).Text(valor);
+        foreach (var casilla in resultado.Casillas)
+        {
+            var numeroPlantilla = F07PdfCoordenadas.ResolverCasillaPlantilla(casilla.Numero);
+            if (!F07PdfCoordenadas.Casillas.TryGetValue(numeroPlantilla, out var campo))
+                continue;
+
+            EscribirTexto(pdf, campo, fuente, FormatearMonto(casilla.Valor), 8);
+        }
     }
 
-    private static string FormatearMonto(decimal valor) => valor.ToString("N2");
-
-    private static List<string> ObtenerConversiones(EntradaDeclaracion entrada)
+    private static void EscribirAvisoReferencia(PdfDocument pdf, PdfFont fuente)
     {
-        var notas = new List<string>();
-
-        AgregarConversion(notas, "Ventas CCF", entrada.VentasCcf, entrada.VentasCcfModo);
-        AgregarConversion(notas, "Ventas factura", entrada.VentasFactura, entrada.VentasFacturaModo);
-        AgregarConversion(notas, "Devoluciones ventas", entrada.DevolucionesVentas, entrada.DevolucionesVentasModo);
-        AgregarConversion(notas, "Compras CCF", entrada.ComprasGravadas, entrada.ComprasGravadasModo);
-        AgregarConversion(notas, "Devoluciones compras", entrada.DevolucionesCompras, entrada.DevolucionesComprasModo);
-
-        return notas;
+        var canvas = new PdfCanvas(pdf.GetPage(1));
+        const string aviso = "Documento de referencia generado por DecIva — no sustituye la presentación en el portal del MH.";
+        canvas.SaveState();
+        canvas.SetFillColor(new DeviceRgb(120, 120, 120));
+        canvas.BeginText()
+            .SetFontAndSize(fuente, 7)
+            .MoveText(36, 18)
+            .ShowText(aviso)
+            .EndText();
+        canvas.RestoreState();
     }
 
-    private static void AgregarConversion(List<string> notas, string concepto, decimal monto, ModoIngresoMonto modo)
+    private static void PintarRectanguloBlanco(PdfDocument pdf, CampoPdf campo)
     {
-        if (monto <= 0 || modo != ModoIngresoMonto.TotalConIva)
+        var page = pdf.GetPage(campo.Pagina);
+        var canvas = new PdfCanvas(page.NewContentStreamAfter(), page.GetResources(), pdf);
+        canvas.SaveState();
+        canvas.SetFillColor(ColorConstants.WHITE);
+        canvas.Rectangle(campo.X - 2, campo.Y - 2, campo.Ancho + 4, campo.Alto + 5);
+        canvas.Fill();
+        canvas.RestoreState();
+    }
+
+    private static void EscribirTexto(PdfDocument pdf, CampoPdf campo, PdfFont fuente, string texto, float tamano)
+    {
+        if (string.IsNullOrWhiteSpace(texto))
             return;
 
-        var baseGravable = IvaUtilidades.ABaseGravable(monto, modo);
-        notas.Add($"{concepto}: US$ {FormatearMonto(monto)} con IVA → US$ {FormatearMonto(baseGravable)} base gravable");
+        var page = pdf.GetPage(campo.Pagina);
+        var canvas = new PdfCanvas(page.NewContentStreamAfter(), page.GetResources(), pdf);
+        var anchoTexto = fuente.GetWidth(texto, tamano);
+        var x = campo.AlinearDerecha ? campo.X + campo.Ancho - anchoTexto : campo.X;
+
+        canvas.SaveState();
+        canvas.SetFillColor(ColorConstants.BLACK);
+        canvas.BeginText()
+            .SetFontAndSize(fuente, tamano)
+            .MoveText(x, campo.Y)
+            .ShowText(texto)
+            .EndText();
+        canvas.RestoreState();
     }
+
+    public static string NombreArchivo(ResultadoDeclaracion resultado) =>
+        $"f07-{resultado.Entrada.Mes:D2}-{resultado.Entrada.Anio}.pdf";
+
+    public static string EtiquetaPeriodo(ResultadoDeclaracion resultado) =>
+        $"{Meses[resultado.Entrada.Mes]} {resultado.Entrada.Anio}";
+
+    private static string FormatearMonto(decimal valor) => valor.ToString("N2");
 }

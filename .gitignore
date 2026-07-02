@@ -20,6 +20,8 @@ Properties/serviceDependencies*.json.user
 *.PDF
 **/*.pdf
 **/*.PDF
+!Assets/Plantillas/
+!Assets/Plantillas/*.pdf
 
 ## Documentos locales de referencia / datos de contribuyentes
 samples/
@@ -33,3 +35,6 @@ Thumbs.db
 
 ## Logs
 *.log
+
+## Local tooling
+tools/

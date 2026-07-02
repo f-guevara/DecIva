@@ -5,4 +5,5 @@ out/
 .git/
 .env
 *.pdf
-**/*.pdf
+!Assets/Plantillas/
+!Assets/Plantillas/*.pdf

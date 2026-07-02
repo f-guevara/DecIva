@@ -12,7 +12,11 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.27" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.27" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
-    <PackageReference Include="QuestPDF" Version="2026.6.0" />
+    <PackageReference Include="itext7" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\Plantillas\F07-v14.pdf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
