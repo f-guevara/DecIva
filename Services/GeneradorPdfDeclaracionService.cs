@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using DecIva.Models;
 using iText.IO.Font.Constants;
 using iText.Kernel.Colors;
@@ -7,8 +9,10 @@ using iText.Kernel.Pdf.Canvas;
 
 namespace DecIva.Services;
 
-public class GeneradorPdfDeclaracionService(IWebHostEnvironment entorno)
+public class GeneradorPdfDeclaracionService
 {
+    private const string PlantillaEmbedded = "DecIva.Assets.Plantillas.F07-v14.pdf";
+
     private static readonly string[] Meses =
     [
         "", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -17,11 +21,7 @@ public class GeneradorPdfDeclaracionService(IWebHostEnvironment entorno)
 
     public byte[] Generar(ResultadoDeclaracion resultado)
     {
-        var plantilla = Path.Combine(entorno.ContentRootPath, F07PdfCoordenadas.RutaPlantilla);
-        if (!File.Exists(plantilla))
-            throw new FileNotFoundException("No se encontró la plantilla del formulario F07.", plantilla);
-
-        using var plantillaStream = File.OpenRead(plantilla);
+        using var plantillaStream = AbrirPlantilla();
         using var salida = new MemoryStream();
         using var reader = new PdfReader(plantillaStream);
         using var writer = new PdfWriter(salida);
@@ -37,6 +37,19 @@ public class GeneradorPdfDeclaracionService(IWebHostEnvironment entorno)
 
         pdf.Close();
         return salida.ToArray();
+    }
+
+    private static Stream AbrirPlantilla()
+    {
+        var embedded = typeof(GeneradorPdfDeclaracionService).Assembly
+            .GetManifestResourceStream(PlantillaEmbedded);
+
+        if (embedded is not null)
+            return embedded;
+
+        throw new FileNotFoundException(
+            "No se encontró la plantilla embebida del formulario F07.",
+            PlantillaEmbedded);
     }
 
     private static void LimpiarPlantilla(PdfDocument pdf)
@@ -60,12 +73,12 @@ public class GeneradorPdfDeclaracionService(IWebHostEnvironment entorno)
 
     private static void EscribirIdentificacion(PdfDocument pdf, PdfFont fuente, EntradaDeclaracion entrada)
     {
-        var mes = entrada.Mes.ToString();
-        var anio = entrada.Anio.ToString();
-        var nit = entrada.Nit.Trim();
-        var nrc = entrada.Nrc.Trim();
-        var razon = entrada.RazonSocial.Trim();
-        var comercial = entrada.NombreComercial?.Trim() ?? string.Empty;
+        var mes = entrada.Mes.ToString(CultureInfo.InvariantCulture);
+        var anio = entrada.Anio.ToString(CultureInfo.InvariantCulture);
+        var nit = SanitizarTextoPdf(entrada.Nit);
+        var nrc = SanitizarTextoPdf(entrada.Nrc);
+        var razon = SanitizarTextoPdf(entrada.RazonSocial);
+        var comercial = SanitizarTextoPdf(entrada.NombreComercial ?? string.Empty);
 
         EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[0], fuente, mes, 9);
         EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[1], fuente, anio, 9);
@@ -99,7 +112,7 @@ public class GeneradorPdfDeclaracionService(IWebHostEnvironment entorno)
     private static void EscribirAvisoReferencia(PdfDocument pdf, PdfFont fuente)
     {
         var canvas = new PdfCanvas(pdf.GetPage(1));
-        const string aviso = "Documento de referencia generado por DecIva — no sustituye la presentación en el portal del MH.";
+        const string aviso = "Documento de referencia generado por DecIva - no sustituye la presentacion en el portal del MH.";
         canvas.SaveState();
         canvas.SetFillColor(new DeviceRgb(120, 120, 120));
         canvas.BeginText()
@@ -123,6 +136,7 @@ public class GeneradorPdfDeclaracionService(IWebHostEnvironment entorno)
 
     private static void EscribirTexto(PdfDocument pdf, CampoPdf campo, PdfFont fuente, string texto, float tamano)
     {
+        texto = SanitizarTextoPdf(texto);
         if (string.IsNullOrWhiteSpace(texto))
             return;
 
@@ -141,11 +155,39 @@ public class GeneradorPdfDeclaracionService(IWebHostEnvironment entorno)
         canvas.RestoreState();
     }
 
+    /// <summary>Helvetica WinAnsi no admite todos los caracteres Unicode.</summary>
+    private static string SanitizarTextoPdf(string texto)
+    {
+        if (string.IsNullOrWhiteSpace(texto))
+            return string.Empty;
+
+        var normalizado = texto.Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(normalizado.Length);
+
+        foreach (var c in normalizado)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark)
+                continue;
+
+            sb.Append(c switch
+            {
+                '—' or '–' => '-',
+                '“' or '”' => '"',
+                '‘' or '’' => '\'',
+                >= '\u0020' and <= '\u00FF' => c,
+                _ => '?',
+            });
+        }
+
+        return sb.ToString().Trim();
+    }
+
     public static string NombreArchivo(ResultadoDeclaracion resultado) =>
         $"f07-{resultado.Entrada.Mes:D2}-{resultado.Entrada.Anio}.pdf";
 
     public static string EtiquetaPeriodo(ResultadoDeclaracion resultado) =>
         $"{Meses[resultado.Entrada.Mes]} {resultado.Entrada.Anio}";
 
-    private static string FormatearMonto(decimal valor) => valor.ToString("N2");
+    private static string FormatearMonto(decimal valor) =>
+        valor.ToString("N2", CultureInfo.InvariantCulture);
 }

@@ -207,6 +207,11 @@
         </button>
     </EditForm>
 
+    @if (!string.IsNullOrEmpty(_errorPdf))
+    {
+        <div class="alert alert-danger mt-3 mb-0">@_errorPdf</div>
+    }
+
     @if (_resultado is not null)
     {
         <div class="card mt-4 border-success">
@@ -254,6 +259,7 @@
     private EntradaDeclaracion _entrada = new();
     private ResultadoDeclaracion? _resultado;
     private bool _generando;
+    private string? _errorPdf;
     private bool _tieneAnticipoCuenta;
 
     private bool TieneAnticipoCuenta
@@ -279,6 +285,7 @@
     {
         _generando = true;
         _resultado = null;
+        _errorPdf = null;
 
         try
         {
@@ -286,6 +293,11 @@
             var pdf = GeneradorPdf.Generar(_resultado);
             var nombre = GeneradorPdfDeclaracionService.NombreArchivo(_resultado);
             await JS.InvokeVoidAsync("decIva.downloadPdf", nombre, Convert.ToBase64String(pdf));
+        }
+        catch (Exception ex)
+        {
+            _errorPdf = "No se pudo generar el PDF del F07. Intente de nuevo o contacte soporte.";
+            Console.Error.WriteLine(ex);
         }
         finally
         {

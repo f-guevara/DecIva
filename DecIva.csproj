@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Assets\Plantillas\F07-v14.pdf" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="Assets\Plantillas\F07-v14.pdf" />
   </ItemGroup>
 
 </Project>
