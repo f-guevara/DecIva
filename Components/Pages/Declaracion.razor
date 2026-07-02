@@ -2,6 +2,7 @@
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject CalculadoraIvaService Calculadora
 @inject GeneradorPdfDeclaracionService GeneradorPdf
+@inject GeneradorPdfGuiaService GeneradorGuia
 @inject IJSRuntime JS
 
 <PageTitle>Declaración de IVA</PageTitle>
@@ -195,6 +196,18 @@
             </div>
         </div>
 
+        <div class="mb-4">
+            <div class="form-check">
+                <InputCheckbox @bind-Value="_descargarGuiaCasillas" class="form-check-input" id="descargarGuia" />
+                <label class="form-check-label" for="descargarGuia">
+                    También descargar guía de casillas (formato resumen)
+                </label>
+            </div>
+            <p class="form-text ms-4 mb-0">
+                La guía lista cada casilla con su monto para cotejar con el portal del MH. No es la declaración oficial — solo ayuda para llenar la declaración en línea.
+            </p>
+        </div>
+
         <button type="submit" class="btn btn-primary btn-lg w-100" disabled="@_generando">
             @if (_generando)
             {
@@ -202,7 +215,7 @@
             }
             else
             {
-                <span>Calcular y descargar F07</span>
+                <span>Calcular y descargar@(_descargarGuiaCasillas ? " PDFs" : " F07")</span>
             }
         </button>
     </EditForm>
@@ -256,7 +269,16 @@
                         <span class="text-muted">(casilla 165 — sección E del F07)</span>
                     </p>
                 }
-                <p class="text-muted mt-2 mb-0 small">Se descargó el formulario F07 con sus datos. Revíselo y transcríbalo al portal del MH.</p>
+                <p class="text-muted mt-2 mb-0 small">
+                    @if (_descargoGuiaCasillas)
+                    {
+                        <text>Se descargaron el formulario F07 y la guía de casillas. Revise ambos antes de llenar la declaración en el portal del MH.</text>
+                    }
+                    else
+                    {
+                        <text>Se descargó el formulario F07 con sus datos. Revíselo y transcríbalo al portal del MH.</text>
+                    }
+                </p>
             </div>
         </div>
     }
@@ -268,6 +290,8 @@
     private bool _generando;
     private string? _errorPdf;
     private bool _tieneAnticipoCuenta;
+    private bool _descargarGuiaCasillas;
+    private bool _descargoGuiaCasillas;
 
     private bool TieneAnticipoCuenta
     {
@@ -293,17 +317,34 @@
         _generando = true;
         _resultado = null;
         _errorPdf = null;
+        _descargoGuiaCasillas = false;
 
         try
         {
             _resultado = Calculadora.Calcular(_entrada);
-            var pdf = GeneradorPdf.Generar(_resultado);
-            var nombre = GeneradorPdfDeclaracionService.NombreArchivo(_resultado);
-            await JS.InvokeVoidAsync("decIva.downloadPdf", nombre, Convert.ToBase64String(pdf));
+
+            var descargas = new List<object>
+            {
+                new { name = GeneradorPdfDeclaracionService.NombreArchivo(_resultado), base64 = Convert.ToBase64String(GeneradorPdf.Generar(_resultado)) }
+            };
+
+            if (_descargarGuiaCasillas)
+            {
+                descargas.Add(new
+                {
+                    name = GeneradorPdfGuiaService.NombreArchivo(_resultado),
+                    base64 = Convert.ToBase64String(GeneradorGuia.Generar(_resultado))
+                });
+                _descargoGuiaCasillas = true;
+            }
+
+            await JS.InvokeVoidAsync("decIva.downloadPdfs", descargas);
         }
         catch (Exception ex)
         {
-            _errorPdf = "No se pudo generar el PDF del F07. Intente de nuevo o contacte soporte.";
+            _errorPdf = _descargarGuiaCasillas
+                ? "No se pudieron generar los PDF. Intente de nuevo o contacte soporte."
+                : "No se pudo generar el PDF del F07. Intente de nuevo o contacte soporte.";
             Console.Error.WriteLine(ex);
         }
         finally

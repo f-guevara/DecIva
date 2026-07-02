@@ -6,5 +6,12 @@ window.decIva = {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    },
+    downloadPdfs: function (files) {
+        files.forEach(function (file, index) {
+            setTimeout(function () {
+                window.decIva.downloadPdf(file.name, file.base64);
+            }, index * 500);
+        });
     }
 };

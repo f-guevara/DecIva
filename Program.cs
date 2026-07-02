@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using QuestPDF.Infrastructure;
+
+QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +46,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddSingleton<CalculadoraIvaService>();
 builder.Services.AddSingleton<GeneradorPdfDeclaracionService>();
+builder.Services.AddSingleton<GeneradorPdfGuiaService>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
