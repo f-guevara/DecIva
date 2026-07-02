@@ -323,22 +323,23 @@
         {
             _resultado = Calculadora.Calcular(_entrada);
 
-            var descargas = new List<object>
+            var descargas = new List<PdfDescarga>
             {
-                new { name = GeneradorPdfDeclaracionService.NombreArchivo(_resultado), base64 = Convert.ToBase64String(GeneradorPdf.Generar(_resultado)) }
+                new(GeneradorPdfDeclaracionService.NombreArchivo(_resultado), Convert.ToBase64String(GeneradorPdf.Generar(_resultado)))
             };
 
             if (_descargarGuiaCasillas)
             {
-                descargas.Add(new
-                {
-                    name = GeneradorPdfGuiaService.NombreArchivo(_resultado),
-                    base64 = Convert.ToBase64String(GeneradorGuia.Generar(_resultado))
-                });
+                descargas.Add(new(
+                    GeneradorPdfGuiaService.NombreArchivo(_resultado),
+                    Convert.ToBase64String(GeneradorGuia.Generar(_resultado))));
                 _descargoGuiaCasillas = true;
             }
 
-            await JS.InvokeVoidAsync("decIva.downloadPdfs", descargas);
+            if (descargas.Count == 1)
+                await JS.InvokeVoidAsync("decIva.downloadPdf", descargas[0].Name, descargas[0].Base64);
+            else
+                await JS.InvokeVoidAsync("decIva.downloadPdfs", descargas);
         }
         catch (Exception ex)
         {

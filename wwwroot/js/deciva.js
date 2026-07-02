@@ -8,6 +8,13 @@ window.decIva = {
         document.body.removeChild(link);
     },
     downloadPdfs: function (files) {
+        if (!files || files.length === 0) {
+            return;
+        }
+        if (files.length === 1) {
+            window.decIva.downloadPdf(files[0].name, files[0].base64);
+            return;
+        }
         files.forEach(function (file, index) {
             setTimeout(function () {
                 window.decIva.downloadPdf(file.name, file.base64);
