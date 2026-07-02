@@ -1,6 +1,13 @@
 namespace DecIva.Services;
 
-internal readonly record struct CampoPdf(int Pagina, float X, float Y, float Ancho, float Alto, bool AlinearDerecha = true);
+internal readonly record struct CampoPdf(
+    int Pagina,
+    float X,
+    float Y,
+    float Ancho,
+    float Alto,
+    bool AlinearDerecha = true,
+    float TamanoMaximo = 7f);
 
 /// <summary>
 /// Posiciones medidas sobre la plantilla F07 v14 (Letter, origen inferior izquierdo).
@@ -11,31 +18,32 @@ internal static class F07PdfCoordenadas
 
     public static readonly IReadOnlyDictionary<int, CampoPdf> Casillas = new Dictionary<int, CampoPdf>
     {
-        [80] = new(1, 288.3f, 256.2f, 48f, 11f),
-        [81] = new(1, 288.3f, 231.2f, 48f, 11f),
-        [85] = new(1, 288.3f, 592.2f, 48f, 11f),
-        [86] = new(1, 288.3f, 580.2f, 48f, 11f),
-        [97] = new(1, 288.3f, 448.2f, 48f, 11f),
-        [100] = new(1, 265.4f, 67.5f, 48f, 11f),
-        [105] = new(1, 288.3f, 371.2f, 48f, 11f),
-        [110] = new(1, 567.4f, 184.5f, 48f, 11f),
-        [130] = new(1, 571.3f, 256.2f, 48f, 11f),
-        [131] = new(1, 571.3f, 231.2f, 48f, 11f),
-        [135] = new(1, 571.3f, 568.2f, 48f, 11f),
-        [140] = new(1, 571.3f, 472.2f, 48f, 11f),
-        [143] = new(1, 571.3f, 448.2f, 48f, 11f),
-        [145] = new(1, 567.4f, 67.5f, 48f, 11f),
-        [150] = new(1, 567.4f, 370.5f, 48f, 11f),
-        [155] = new(1, 567.4f, 45.5f, 48f, 11f),
-        [160] = new(1, 567.4f, 23.5f, 48f, 11f),
-        [165] = new(2, 570.3f, 598.7f, 48f, 11f),
-        [166] = new(2, 571.3f, 585.7f, 48f, 11f),
-        [168] = new(2, 571.3f, 489.7f, 48f, 11f),
-        [171] = new(2, 566.4f, 371.5f, 48f, 11f),
+        // Columna izquierda (bases): valores alineados a la derecha dentro de ~15 pt
+        [80] = new(1, 273.3f, 256.2f, 15f, 9f),
+        [81] = new(1, 273.3f, 231.2f, 15f, 9f),
+        [95] = new(1, 273.3f, 484.2f, 15f, 9f),
+        [96] = new(1, 273.3f, 472.2f, 15f, 9f),
+        [97] = new(1, 273.3f, 448.2f, 15f, 9f),
+        [100] = new(1, 250.4f, 67.5f, 18f, 9f),
+        [105] = new(1, 273.3f, 371.2f, 15f, 9f),
+        // Columna derecha (créditos / débitos IVA): ~17 pt
+        [110] = new(1, 571.3f, 184.5f, 17f, 9f),
+        [130] = new(1, 571.3f, 256.2f, 17f, 9f),
+        [131] = new(1, 571.3f, 231.2f, 17f, 9f),
+        [135] = new(1, 571.3f, 568.2f, 17f, 9f),
+        [140] = new(1, 571.3f, 472.2f, 17f, 9f),
+        [143] = new(1, 571.3f, 448.2f, 17f, 9f),
+        [145] = new(1, 571.3f, 67.5f, 17f, 9f),
+        [150] = new(1, 571.3f, 370.5f, 17f, 9f),
+        [155] = new(1, 571.3f, 45.5f, 17f, 9f),
+        [160] = new(1, 571.3f, 23.5f, 17f, 9f),
+        [165] = new(2, 571.3f, 598.7f, 17f, 9f),
+        [166] = new(2, 571.3f, 585.7f, 17f, 9f),
+        [168] = new(2, 571.3f, 489.7f, 17f, 9f),
+        [171] = new(2, 571.3f, 371.5f, 17f, 9f),
+        [521] = new(2, 571.3f, 443.5f, 17f, 9f),
+        [198] = new(2, 571.3f, 174.5f, 17f, 9f),
     };
-
-    /// <summary>La app calcula devoluciones de ventas en casilla 87; en el F07 v14 va en la 97.</summary>
-    public static int ResolverCasillaPlantilla(int numeroCasilla) => numeroCasilla == 87 ? 97 : numeroCasilla;
 
     public static readonly IReadOnlyList<CampoPdf> IdentificacionPagina1 =
     [

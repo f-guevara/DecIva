@@ -54,20 +54,20 @@ public class GeneradorPdfDeclaracionService
 
     private static void LimpiarPlantilla(PdfDocument pdf)
     {
-        var regiones = F07PdfCoordenadas.Casillas.Values
-            .Concat(F07PdfCoordenadas.IdentificacionPagina1)
-            .Concat(F07PdfCoordenadas.IdentificacionPagina2)
-            .Concat(F07PdfCoordenadas.IdentificacionPagina3)
-            .Append(new CampoPdf(1, 493.8f, 747.6f, 70f, 11f, false))
-            .Append(new CampoPdf(2, 493.8f, 747.6f, 70f, 11f, false))
-            .Append(new CampoPdf(3, 493.8f, 747.6f, 70f, 11f, false))
-            .Append(new CampoPdf(1, 537.4f, 618.4f, 60f, 11f, false))
-            .Append(new CampoPdf(1, 180f, 618f, 320f, 11f, false))
-            .Append(new CampoPdf(1, 460f, 615.5f, 80f, 11f, false))
-            .Append(new CampoPdf(2, 448.7f, 150.4f, 120f, 11f, false))
-            .Append(new CampoPdf(2, 455f, 96.7f, 70f, 11f, false));
+        foreach (var region in F07PdfCoordenadas.Casillas.Values)
+            PintarRectanguloBlanco(pdf, region, extraAncho: 16f);
 
-        foreach (var region in regiones)
+        foreach (var region in F07PdfCoordenadas.IdentificacionPagina1
+                     .Concat(F07PdfCoordenadas.IdentificacionPagina2)
+                     .Concat(F07PdfCoordenadas.IdentificacionPagina3)
+                     .Append(new CampoPdf(1, 493.8f, 747.6f, 70f, 11f, false))
+                     .Append(new CampoPdf(2, 493.8f, 747.6f, 70f, 11f, false))
+                     .Append(new CampoPdf(3, 493.8f, 747.6f, 70f, 11f, false))
+                     .Append(new CampoPdf(1, 537.4f, 618.4f, 60f, 11f, false))
+                     .Append(new CampoPdf(1, 180f, 618f, 320f, 11f, false))
+                     .Append(new CampoPdf(1, 460f, 615.5f, 80f, 11f, false))
+                     .Append(new CampoPdf(2, 448.7f, 150.4f, 120f, 11f, false))
+                     .Append(new CampoPdf(2, 455f, 96.7f, 70f, 11f, false)))
             PintarRectanguloBlanco(pdf, region);
     }
 
@@ -80,20 +80,20 @@ public class GeneradorPdfDeclaracionService
         var razon = SanitizarTextoPdf(entrada.RazonSocial);
         var comercial = SanitizarTextoPdf(entrada.NombreComercial ?? string.Empty);
 
-        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[0], fuente, mes, 9);
-        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[1], fuente, anio, 9);
-        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[2], fuente, nit, 9);
-        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[3], fuente, nrc, 9);
-        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[4], fuente, razon, 8);
+        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[0], fuente, mes, 8);
+        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[1], fuente, anio, 8);
+        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[2], fuente, nit, 7);
+        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[3], fuente, nrc, 7);
+        EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[4], fuente, razon, 7);
         if (!string.IsNullOrWhiteSpace(comercial))
-            EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[5], fuente, comercial, 8);
+            EscribirTexto(pdf, F07PdfCoordenadas.IdentificacionPagina1[5], fuente, comercial, 7);
 
         foreach (var pagina in new[] { F07PdfCoordenadas.IdentificacionPagina2, F07PdfCoordenadas.IdentificacionPagina3 })
         {
-            EscribirTexto(pdf, pagina[0], fuente, mes, 9);
-            EscribirTexto(pdf, pagina[1], fuente, anio, 9);
-            EscribirTexto(pdf, pagina[2], fuente, nit, 9);
-            EscribirTexto(pdf, pagina[3], fuente, nrc, 9);
+            EscribirTexto(pdf, pagina[0], fuente, mes, 8);
+            EscribirTexto(pdf, pagina[1], fuente, anio, 8);
+            EscribirTexto(pdf, pagina[2], fuente, nit, 7);
+            EscribirTexto(pdf, pagina[3], fuente, nrc, 7);
         }
     }
 
@@ -101,11 +101,10 @@ public class GeneradorPdfDeclaracionService
     {
         foreach (var casilla in resultado.Casillas)
         {
-            var numeroPlantilla = F07PdfCoordenadas.ResolverCasillaPlantilla(casilla.Numero);
-            if (!F07PdfCoordenadas.Casillas.TryGetValue(numeroPlantilla, out var campo))
+            if (!F07PdfCoordenadas.Casillas.TryGetValue(casilla.Numero, out var campo))
                 continue;
 
-            EscribirTexto(pdf, campo, fuente, FormatearMonto(casilla.Valor), 8);
+            EscribirTextoEnCampo(pdf, campo, fuente, FormatearMonto(casilla.Valor));
         }
     }
 
@@ -123,14 +122,47 @@ public class GeneradorPdfDeclaracionService
         canvas.RestoreState();
     }
 
-    private static void PintarRectanguloBlanco(PdfDocument pdf, CampoPdf campo)
+    private static void PintarRectanguloBlanco(PdfDocument pdf, CampoPdf campo, float extraAncho = 0f)
     {
         var page = pdf.GetPage(campo.Pagina);
         var canvas = new PdfCanvas(page.NewContentStreamAfter(), page.GetResources(), pdf);
         canvas.SaveState();
         canvas.SetFillColor(ColorConstants.WHITE);
-        canvas.Rectangle(campo.X - 2, campo.Y - 2, campo.Ancho + 4, campo.Alto + 5);
+        canvas.Rectangle(campo.X - 1, campo.Y - 1, campo.Ancho + extraAncho + 2, campo.Alto + 3);
         canvas.Fill();
+        canvas.RestoreState();
+    }
+
+    private static void EscribirTextoEnCampo(PdfDocument pdf, CampoPdf campo, PdfFont fuente, string texto)
+    {
+        texto = SanitizarTextoPdf(texto);
+        if (string.IsNullOrWhiteSpace(texto))
+            return;
+
+        var tamano = campo.TamanoMaximo;
+        const float tamanoMinimo = 4.5f;
+        var anchoTexto = fuente.GetWidth(texto, tamano);
+
+        while (anchoTexto > campo.Ancho && tamano > tamanoMinimo)
+        {
+            tamano -= 0.25f;
+            anchoTexto = fuente.GetWidth(texto, tamano);
+        }
+
+        var x = campo.AlinearDerecha
+            ? campo.X + campo.Ancho - anchoTexto
+            : campo.X;
+
+        var page = pdf.GetPage(campo.Pagina);
+        var canvas = new PdfCanvas(page.NewContentStreamAfter(), page.GetResources(), pdf);
+
+        canvas.SaveState();
+        canvas.SetFillColor(ColorConstants.BLACK);
+        canvas.BeginText()
+            .SetFontAndSize(fuente, tamano)
+            .MoveText(x, campo.Y)
+            .ShowText(texto)
+            .EndText();
         canvas.RestoreState();
     }
 
@@ -189,5 +221,5 @@ public class GeneradorPdfDeclaracionService
         $"{Meses[resultado.Entrada.Mes]} {resultado.Entrada.Anio}";
 
     private static string FormatearMonto(decimal valor) =>
-        valor.ToString("N2", CultureInfo.InvariantCulture);
+        valor.ToString("0.00", CultureInfo.InvariantCulture);
 }

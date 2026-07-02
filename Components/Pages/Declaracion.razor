@@ -67,21 +67,21 @@
                 <div class="row g-4">
                     <div class="col-md-6">
                         <CampoMontoIva Label="Ventas con CCF"
-                                       Casilla="85"
+                                       Casilla="95"
                                        TipoDocumento="TipoDocumentoFiscal.ComprobanteCreditoFiscal"
                                        @bind-Monto="_entrada.VentasCcf"
                                        @bind-Modo="_entrada.VentasCcfModo" />
                     </div>
                     <div class="col-md-6">
                         <CampoMontoIva Label="Ventas con factura consumidor final"
-                                       Casilla="86"
+                                       Casilla="96"
                                        TipoDocumento="TipoDocumentoFiscal.FacturaConsumidorFinal"
                                        @bind-Monto="_entrada.VentasFactura"
                                        @bind-Modo="_entrada.VentasFacturaModo" />
                     </div>
                     <div class="col-md-6">
                         <CampoMontoIva Label="Devoluciones sobre ventas"
-                                       Casilla="87"
+                                       Casilla="97"
                                        TipoDocumento="TipoDocumentoFiscal.ComprobanteCreditoFiscal"
                                        @bind-Monto="_entrada.DevolucionesVentas"
                                        @bind-Modo="_entrada.DevolucionesVentasModo" />
@@ -220,14 +220,21 @@
                 @if (_resultado.TieneImpuestoAPagar)
                 {
                     <p class="mb-0 fs-5">
-                        Impuesto neto a pagar: <strong class="text-danger">US$ @_resultado.ImpuestoNetoOperaciones.ToString("N2")</strong>
-                        <span class="text-muted">(casilla 168)</span>
+                        Total a pagar: <strong class="text-danger">US$ @_resultado.TotalAPagar.ToString("N2")</strong>
+                        <span class="text-muted">(casilla 198)</span>
                     </p>
-                    @if (_resultado.ImpuestoDeterminado > _resultado.ImpuestoNetoOperaciones)
+                    @if (_resultado.UsaAnticipoCuenta)
+                    {
+                        <p class="text-muted small mb-0 mt-1">
+                            Impuesto neto (168): US$ @_resultado.ImpuestoNetoOperaciones.ToString("N2")
+                            → casilla 521: US$ @_resultado.ImpuestoCasilla521.ToString("N2")
+                        </p>
+                    }
+                    else
                     {
                         <p class="text-muted small mb-0 mt-1">
                             Impuesto determinado (160): US$ @_resultado.ImpuestoDeterminado.ToString("N2")
-                            − anticipo recibido (171): US$ @_resultado.AnticipoRecibidoVentas.ToString("N2")
+                            → casilla 521: US$ @_resultado.ImpuestoCasilla521.ToString("N2")
                         </p>
                     }
                 }
